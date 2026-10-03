@@ -118,58 +118,22 @@ def create_opportunity():
         if conn:
             conn.close()
 
-@app.route("/api/opportunities/<int:id>", methods=["PUT"])
-def update_opportunity(id):
-    data = request.get_json(silent=True)
-
-    # 1. Validation
-    if not data:
-        return jsonify({"error": "Request body must be valid JSON"}), 400
-
-    for field in REQUIRED_FIELDS:
-        if field not in data or str(data[field]).strip() == "":
-            return jsonify({"error": f"{field} is required"}), 400
-
-    try:
-        positions = int(data["positions"])
-        if positions < 1:
-            raise ValueError
-    except (ValueError, TypeError):
-        return jsonify({"error": "positions must be a positive number"}), 400
-
-    status = data.get("status", "Open")
-    if status not in ("Open", "Closed"):
-        return jsonify({"error": "status must be Open or Closed"}), 400
-
+@app.route("/api/opportunities/<int:id>", methods=["DELETE"])
+def delete_opportunity(id):
     conn = None
     cursor = None
     try:
         conn = get_connection()
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor()
 
-        # 2. Check ID exists
         cursor.execute("SELECT id FROM opportunities WHERE id = %s", (id,))
         if cursor.fetchone() is None:
             return jsonify({"error": "Opportunity not found"}), 404
 
-        # 3. Update
-        cursor.execute(
-            """UPDATE opportunities
-               SET title=%s, description=%s, research_area=%s,
-                   faculty_name=%s, department=%s, required_skills=%s,
-                   positions=%s, deadline=%s, status=%s
-               WHERE id=%s""",
-            (data["title"], data["description"], data["research_area"],
-             data["faculty_name"], data["department"], data["required_skills"],
-             positions, data["deadline"], status, id)
-        )
+        cursor.execute("DELETE FROM opportunities WHERE id = %s", (id,))
         conn.commit()
 
-        # 4. Return updated record
-        cursor.execute("SELECT * FROM opportunities WHERE id = %s", (id,))
-        row = cursor.fetchone()
-        row["deadline"] = str(row["deadline"])
-        return jsonify(row), 200
+        return jsonify({"message": "Opportunity deleted successfully"}), 200
 
     except Exception as e:
         print("Error:", e)
