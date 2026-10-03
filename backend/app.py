@@ -33,5 +33,30 @@ def get_all_opportunities():
             cursor.close()
         if conn:
             conn.close()
+@app.route("/api/opportunities/<int:id>", methods=["GET"])
+def get_opportunity(id):
+    conn = None
+    cursor = None
+    try:
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT * FROM opportunities WHERE id = %s", (id,))
+        row = cursor.fetchone()
+
+        if row is None:
+            return jsonify({"error": "Opportunity not found"}), 404
+
+        row["deadline"] = str(row["deadline"])
+        return jsonify(row), 200
+
+    except Exception as e:
+        print("Error:", e)
+        return jsonify({"error": "Internal server error"}), 500
+
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()            
 if __name__ == "__main__":
     app.run(debug=True)
