@@ -1,0 +1,30 @@
+info:
+  name: Update opportunity
+  type: http
+  seq: 3
+
+http:
+  method: PUT
+  url: http://localhost:5000/api/opportunities/1
+  body:
+    type: json
+    data: |-
+      {
+        "title": "ML for Crop Disease Detection (Updated)",
+        "description": "Build image classification models to detect crop diseases.",
+        "research_area": "Machine Learning",
+        "faculty_name": "Dr. Ahmed Khan",
+        "department": "Computer Science",
+        "required_skills": "Python, TensorFlow, OpenCV",
+        "positions": 4,
+        "deadline": "2026-12-31",
+        "status": "Open"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

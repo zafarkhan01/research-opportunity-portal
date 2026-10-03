@@ -1,0 +1,29 @@
+info:
+  name: Add uopportunity
+  type: http
+  seq: 6
+
+http:
+  method: POST
+  url: http://localhost:5000/api/opportunities
+  body:
+    type: json
+    data: |-
+      {
+        "title": "Blockchain for Secure Voting",
+        "description": "Design a tamper-proof voting prototype.",
+        "research_area": "Blockchain",
+        "faculty_name": "Dr. Sara Ali",
+        "department": "Computer Science",
+        "required_skills": "Python, Solidity",
+        "positions": 2,
+        "deadline": "2026-12-25"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

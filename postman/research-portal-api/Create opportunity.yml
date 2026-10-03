@@ -1,0 +1,29 @@
+info:
+  name: Create opportunity
+  type: http
+  seq: 2
+
+http:
+  method: POST
+  url: http://localhost:5000/api/opportunities
+  body:
+    type: json
+    data: |-
+      {
+        "title": "AI in Healthcare",
+        "description": "Build diagnostic models for medical images.",
+        "research_area": "Artificial Intelligence",
+        "faculty_name": "Dr. Bilal Shah",
+        "department": "Computer Science",
+        "required_skills": "Python, PyTorch",
+        "positions": 2,
+        "deadline": "2026-12-20"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false
