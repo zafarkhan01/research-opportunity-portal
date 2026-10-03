@@ -58,5 +58,64 @@ def get_opportunity(id):
             cursor.close()
         if conn:
             conn.close()            
+REQUIRED_FIELDS = [
+    "title", "description", "research_area", "faculty_name",
+    "department", "required_skills", "positions", "deadline"
+]
+
+@app.route("/api/opportunities", methods=["POST"])
+def create_opportunity():
+    data = request.get_json(silent=True)
+
+    # 1. Validation
+    if not data:
+        return jsonify({"error": "Request body must be valid JSON"}), 400
+
+    for field in REQUIRED_FIELDS:
+        if field not in data or str(data[field]).strip() == "":
+            return jsonify({"error": f"{field} is required"}), 400
+
+    try:
+        positions = int(data["positions"])
+        if positions < 1:
+            raise ValueError
+    except (ValueError, TypeError):
+        return jsonify({"error": "positions must be a positive number"}), 400
+
+    status = data.get("status", "Open")
+    if status not in ("Open", "Closed"):
+        return jsonify({"error": "status must be Open or Closed"}), 400
+
+    conn = None
+    cursor = None
+    try:
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute(
+            """INSERT INTO opportunities
+               (title, description, research_area, faculty_name,
+                department, required_skills, positions, deadline, status)
+               VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)""",
+            (data["title"], data["description"], data["research_area"],
+             data["faculty_name"], data["department"], data["required_skills"],
+             positions, data["deadline"], status)
+        )
+        conn.commit()
+        new_id = cursor.lastrowid
+
+        cursor.execute("SELECT * FROM opportunities WHERE id = %s", (new_id,))
+        row = cursor.fetchone()
+        row["deadline"] = str(row["deadline"])
+        return jsonify(row), 201
+
+    except Exception as e:
+        print("Error:", e)
+        return jsonify({"error": "Internal server error"}), 500
+
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
 if __name__ == "__main__":
     app.run(debug=True)
