@@ -1,0 +1,28 @@
+info:
+  name: Create invalid (400)
+  type: http
+  seq: 2
+
+http:
+  method: POST
+  url: http://localhost:5000/api/opportunities
+  body:
+    type: json
+    data: |-
+      {
+        "description": "Test with missing title.",
+        "research_area": "Testing",
+        "faculty_name": "Dr. Test",
+        "department": "Computer Science",
+        "required_skills": "Python",
+        "positions": 1,
+        "deadline": "2026-12-30"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false
