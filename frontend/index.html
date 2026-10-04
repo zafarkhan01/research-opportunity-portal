@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Research Opportunity Portal</title>
+<style>
+  body { margin: 0; padding: 20px; background: #0a1428; color: #e6edf8; font-family: Arial, sans-serif; }
+  h1, h2 { margin-top: 0; }
+  .box { background: #12224a; border: 1px solid #243b6e; border-radius: 6px; padding: 16px; margin-bottom: 20px; }
+  input, textarea, select { width: 100%; padding: 7px; margin: 3px 0 10px; background: #0a1428; color: #e6edf8; border: 1px solid #243b6e; border-radius: 4px; box-sizing: border-box; }
+  button { padding: 6px 12px; background: #4da3ff; color: #04132b; border: 0; border-radius: 4px; cursor: pointer; margin: 2px; }
+  button.red { background: #ff6b6b; }
+  button.grey { background: #9bb0d3; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 8px; border-bottom: 1px solid #243b6e; }
+  .table-wrap { overflow-x: auto; }
+  #message { padding: 10px; border-radius: 4px; margin-bottom: 16px; display: none; }
+  .success { background: #14532d; }
+  .error { background: #7f1d1d; }
+  @media (max-width: 600px) { .grid { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+  <h1>Research Opportunity Portal</h1>
+  <div id="message"></div>
+
+  <div class="box">
+    <h2 id="formTitle">Add opportunity</h2>
+    <input type="hidden" id="id">
+    <div class="grid">
+      <div><label>Title</label><input id="title"></div>
+      <div><label>Research area</label><input id="research_area"></div>
+      <div><label>Faculty name</label><input id="faculty_name"></div>
+      <div><label>Department</label><input id="department"></div>
+      <div><label>Required skills</label><input id="required_skills"></div>
+      <div><label>Positions</label><input id="positions" type="number" min="1"></div>
+      <div><label>Deadline</label><input id="deadline" type="date"></div>
+      <div><label>Status</label><select id="status"><option>Open</option><option>Closed</option></select></div>
+    </div>
+    <label>Description</label>
+    <textarea id="description" rows="3"></textarea>
+    <button onclick="saveOpportunity()">Save</button>
+    <button class="grey" onclick="clearForm()">Clear</button>
+  </div>
+
+  <div class="box" id="detailsBox" style="display:none"></div>
+
+  <div class="box">
+    <h2>All opportunities</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Title</th><th>Faculty</th><th>Positions</th><th>Deadline</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+  </div>
+
+<script>
+const API = "http://localhost:5000/api/opportunities";
+const FIELDS = ["title", "description", "research_area", "faculty_name", "department", "required_skills", "positions", "deadline", "status"];
+
+function show(text, type) {
+  const m = document.getElementById("message");
+  m.textContent = text;
+  m.className = type;
+  m.style.display = "block";
+}
+
+// Send request, show status code in the message, return the JSON (or null on error)
+async function send(method, url, body, okText) {
+  try {
+    const res = await fetch(url, {
+      method: method,
+      headers: { "Content-Type": "application/json" },
+      body: body ? JSON.stringify(body) : undefined
+    });
+    const data = await res.json();
+    if (res.ok) { show("Success (" + res.status + "): " + okText, "success"); return data; }
+    show("Error " + res.status + ": " + data.error, "error");
+  } catch (e) {
+    show("Error: cannot reach the server. Is the backend running?", "error");
+  }
+  return null;
+}
+
+async function loadAll() {
+  const data = await send("GET", API, null, "Opportunities loaded");
+  if (!data) return;
+  document.getElementById("rows").innerHTML = data.map(o => `
+    <tr>
+      <td>${o.title}</td><td>${o.faculty_name}</td><td>${o.positions}</td><td>${o.deadline}</td><td>${o.status}</td>
+      <td>
+        <button onclick="viewOne(${o.id})">View</button>
+        <button onclick="editOne(${o.id})">Edit</button>
+        <button onclick="closeOne(${o.id})">Close</button>
+        <button class="red" onclick="deleteOne(${o.id})">Delete</button>
+      </td>
+    </tr>`).join("");
+}
+
+async function viewOne(id) {
+  const o = await send("GET", API + "/" + id, null, "Opportunity loaded");
+  if (!o) return;
+  const box = document.getElementById("detailsBox");
+  box.style.display = "block";
+  box.innerHTML = "<h2>" + o.title + "</h2>" + FIELDS.map(f => "<p><b>" + f.replace("_", " ") + ":</b> " + o[f] + "</p>").join("");
+}
+
+async function editOne(id) {
+  const o = await send("GET", API + "/" + id, null, "Opportunity loaded for editing");
+  if (!o) return;
+  FIELDS.forEach(f => document.getElementById(f).value = o[f]);
+  document.getElementById("id").value = id;
+  document.getElementById("formTitle").textContent = "Edit opportunity";
+  window.scrollTo(0, 0);
+}
+
+async function closeOne(id) {
+  const o = await send("GET", API + "/" + id, null, "Opportunity loaded");
+  if (!o) return;
+  o.status = "Closed";
+  if (await send("PUT", API + "/" + id, o, "Opportunity closed")) loadAll();
+}
+
+async function deleteOne(id) {
+  if (!confirm("Delete this opportunity?")) return;
+  if (await send("DELETE", API + "/" + id, null, "Opportunity deleted")) {
+    document.getElementById("detailsBox").style.display = "none";
+    loadAll();
+  }
+}
+
+async function saveOpportunity() {
+  // basic validation: all fields except status are required
+  for (const f of FIELDS) {
+    if (f !== "status" && document.getElementById(f).value.trim() === "") {
+      show("Please fill in: " + f.replace("_", " "), "error");
+      return;
+    }
+  }
+  const body = {};
+  FIELDS.forEach(f => body[f] = document.getElementById(f).value.trim());
+  body.positions = Number(body.positions);
+
+  const id = document.getElementById("id").value;
+  const data = id
+    ? await send("PUT", API + "/" + id, body, "Opportunity updated")
+    : await send("POST", API, body, "Opportunity created");
+  if (data) { clearForm(); loadAll(); }
+}
+
+function clearForm() {
+  FIELDS.forEach(f => document.getElementById(f).value = "");
+  document.getElementById("status").value = "Open";
+  document.getElementById("id").value = "";
+  document.getElementById("formTitle").textContent = "Add opportunity";
+}
+
+loadAll();
+</script>
+</body>
+</html>
